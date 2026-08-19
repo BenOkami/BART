@@ -141,7 +141,7 @@ function Shell() {
       <footer className="border-t border-line-soft py-6">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-faint">
           <span>Arena de Vendas · placar de equipes e vendedores</span>
-          <span>Placar sincronizado em tempo real na nuvem (Supabase)</span>
+          <span>Placar sincronizado em tempo real na nuvem (Firebase)</span>
         </div>
       </footer>
 

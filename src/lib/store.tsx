@@ -17,24 +17,18 @@ import type {
   TeamStats,
 } from "../types";
 import { uid } from "./utils";
-import { supabase } from "./supabase";
 import {
   DEFAULT_SETTINGS,
   deleteAllEntries,
   deleteAllTeamsAndSellers,
   deleteEntry,
   deleteSeller,
-  deleteTeam,
+  deleteTeamRow,
   fetchInitialState,
   insertEntry,
   insertManyTeams,
   insertSeller,
   insertTeam,
-  rowToEntry,
-  rowToSeller,
-  rowToSettings,
-  rowToTeam,
-  settingsToRow,
   subscribeArena,
   updateSettings,
   updateTeam,
@@ -75,10 +69,9 @@ type Action =
   | { type: "DELETE_ENTRY"; id: string }
   | { type: "SET_SETTINGS"; settings: Settings }
   | { type: "RESET_DEMO"; teams: Team[] }
-  | { type: "CLEAR_ENTRIES" }
-  | { type: "REMOTE"; state: AppState };
+  | { type: "CLEAR_ENTRIES" };
 
-/** Aplica as mudanças no estado local (usado como fallback sem nuvem). */
+/** Aplica as mudanças no estado local (fallback quando a nuvem não responde). */
 function applyLocal(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "ADD_TEAM":
@@ -134,16 +127,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<SyncStatus>("connecting");
 
+  /* conectividade do navegador (para o modo offline) */
+  useEffect(() => {
+    const goOffline = () => setStatus("offline");
+    const goOnline = () => setStatus((s) => (s === "error" ? s : "online"));
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+
   /* carga inicial + assinatura em tempo real */
   useEffect(() => {
-    if (!supabase) {
-      // Sem configuração: o app continua usável em modo local.
-      setState(seedState());
-      setStatus("error");
-      setLoading(false);
-      return;
-    }
-
     let cancelled = false;
     let unsubscribe: (() => void) | undefined;
 
@@ -153,6 +150,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setState(initial);
         setLoading(false);
+        setStatus("online");
 
         unsubscribe = subscribeArena(
           (table, event, row) => {
@@ -160,7 +158,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               if (table === "teams") {
                 const r = row as TeamRow;
                 if (event === "DELETE") return { ...prev, teams: prev.teams.filter((t) => t.id !== r.id) };
-                const t = rowToTeam(r);
+                const t = {
+                  id: r.id,
+                  name: r.name,
+                  color: r.color,
+                  createdAt: r.createdAt ?? Date.now(),
+                };
                 const exists = prev.teams.some((x) => x.id === t.id);
                 return {
                   ...prev,
@@ -170,7 +173,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               if (table === "sellers") {
                 const r = row as SellerRow;
                 if (event === "DELETE") return { ...prev, sellers: prev.sellers.filter((s) => s.id !== r.id) };
-                const s = rowToSeller(r);
+                const s = {
+                  id: r.id,
+                  name: r.name,
+                  teamId: r.teamId,
+                  createdAt: r.createdAt ?? Date.now(),
+                };
                 const exists = prev.sellers.some((x) => x.id === s.id);
                 return {
                   ...prev,
@@ -179,7 +187,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               }
               const r = row as EntryRow;
               if (event === "DELETE") return { ...prev, entries: prev.entries.filter((e) => e.id !== r.id) };
-              const e = rowToEntry(r);
+              const e: Entry = {
+                id: r.id,
+                type: r.type,
+                sellerId: r.sellerId,
+                value: r.value,
+                points: r.points,
+                note: r.note,
+                date: r.date,
+                createdAt: r.createdAt ?? Date.now(),
+              };
               const exists = prev.entries.some((x) => x.id === e.id);
               return {
                 ...prev,
@@ -187,12 +204,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               };
             });
           },
-          (row: SettingsRow) => setState((prev) => ({ ...prev, settings: rowToSettings(row) })),
-          (s) => setStatus(s === "online" ? "online" : "offline")
+          (row: SettingsRow) =>
+            setState((prev) => ({
+              ...prev,
+              settings: { reaisPerPoint: row.reaisPerPoint, pointsPerIndicacao: row.pointsPerIndicacao },
+            }))
         );
-        setStatus("online");
       } catch (err) {
-        console.warn("Falha ao carregar dados do Supabase:", err);
+        console.warn("Falha ao carregar dados do Firestore:", err);
         if (!cancelled) {
           setStatus("error");
           setLoading(false);
@@ -206,57 +225,53 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  /** Sem nuvem configurada/disponível → muta localmente para o app seguir usável. */
-  const dispatchLocal = (action: Action) => setState((s) => applyLocal(s, action));
-
   const dispatch = useMemo<Dispatch<Action>>(() => {
     return (action: Action) => {
-      // Com nuvem, a interface atualiza pelo eco do Realtime.
-      if (supabase && status === "online") {
+      // Com nuvem conectada, a interface atualiza pelo eco do onSnapshot.
+      if (status === "online") {
         switch (action.type) {
           case "ADD_TEAM":
-            void insertTeam(action.team).then(logError);
+            void insertTeam(action.team);
             return;
           case "RENAME_TEAM":
-            void updateTeam(action.id, { name: action.name }).then(logError);
+            void updateTeam(action.id, { name: action.name });
             return;
           case "SET_TEAM_COLOR":
-            void updateTeam(action.id, { color: action.color }).then(logError);
+            void updateTeam(action.id, { color: action.color });
             return;
           case "DELETE_TEAM":
-            void deleteTeam(action.id).then(logError);
+            void deleteTeamRow(action.id);
             return;
           case "ADD_SELLER":
-            void insertSeller(action.seller).then(logError);
+            void insertSeller(action.seller);
             return;
           case "DELETE_SELLER":
-            void deleteSeller(action.id).then(logError);
+            void deleteSeller(action.id);
             return;
           case "ADD_ENTRY":
-            void insertEntry(action.entry).then(logError);
+            void insertEntry(action.entry);
             return;
           case "DELETE_ENTRY":
-            void deleteEntry(action.id).then(logError);
+            void deleteEntry(action.id);
             return;
           case "SET_SETTINGS":
-            void updateSettings(action.settings).then(logError);
+            void updateSettings(action.settings);
             return;
           case "RESET_DEMO":
             void (async () => {
               await deleteAllEntries();
               await deleteAllTeamsAndSellers();
               await insertManyTeams(action.teams);
-            })().catch((err) => console.warn("Supabase:", err));
+            })();
             return;
           case "CLEAR_ENTRIES":
-            void deleteAllEntries().then(logError);
+            void deleteAllEntries();
             return;
         }
       }
-      // Fallback: sem conexão ou sem configuração → aplica local.
-      dispatchLocal(action);
+      // Fallback: sem conexão ou erro de permissão → aplica localmente.
+      setState((s) => applyLocal(s, action));
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const value = useMemo<StoreValue>(
@@ -284,10 +299,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
-}
-
-function logError(res: { error: Error | null } | null) {
-  if (res?.error) console.warn("Supabase:", res.error.message);
 }
 
 export function useStore(): StoreValue {

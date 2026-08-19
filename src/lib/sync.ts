@@ -1,136 +1,130 @@
-import { supabase } from "./supabase";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  setDoc,
+  writeBatch,
+  type CollectionReference,
+  type DocumentData,
+  type QuerySnapshot,
+} from "firebase/firestore";
+import { db } from "./firebase";
 import type { AppState, Entry, EntryType, Seller, Settings, Team } from "../types";
 
 /* ------------------------------------------------------------------ */
-/* Linhas do banco (snake_case) ↔ objetos do app (camelCase)           */
+/* Linhas do Firestore ↔ objetos do app                                */
 /* ------------------------------------------------------------------ */
 
 export interface TeamRow {
   id: string;
   name: string;
   color: string;
-  created_at: number;
+  createdAt?: number;
 }
 
 export interface SellerRow {
   id: string;
   name: string;
-  team_id: string;
-  created_at: number;
+  teamId: string;
+  createdAt?: number;
 }
 
 export interface EntryRow {
   id: string;
   type: EntryType;
-  seller_id: string;
+  sellerId: string;
   value: number;
   points: number;
   note: string;
   date: string;
-  created_at: number;
+  createdAt: number;
 }
 
 export interface SettingsRow {
-  id: string;
-  reais_per_point: number;
-  points_per_indicacao: number;
+  reaisPerPoint: number;
+  pointsPerIndicacao: number;
 }
 
-export const teamToRow = (t: Team): TeamRow => ({
-  id: t.id,
-  name: t.name,
-  color: t.color,
-  created_at: t.createdAt ?? Date.now(),
-});
-export const rowToTeam = (r: TeamRow): Team => ({
+export const DEFAULT_SETTINGS: Settings = { reaisPerPoint: 100, pointsPerIndicacao: 5 };
+
+const rowToTeam = (r: TeamRow): Team => ({
   id: r.id,
   name: r.name,
   color: r.color,
-  createdAt: r.created_at,
+  createdAt: r.createdAt ?? Date.now(),
 });
 
-export const sellerToRow = (s: Seller): SellerRow => ({
-  id: s.id,
-  name: s.name,
-  team_id: s.teamId,
-  created_at: s.createdAt ?? Date.now(),
-});
-export const rowToSeller = (r: SellerRow): Seller => ({
+const rowToSeller = (r: SellerRow): Seller => ({
   id: r.id,
   name: r.name,
-  teamId: r.team_id,
-  createdAt: r.created_at,
+  teamId: r.teamId,
+  createdAt: r.createdAt ?? Date.now(),
 });
 
-export const entryToRow = (e: Entry): EntryRow => ({
-  id: e.id,
-  type: e.type,
-  seller_id: e.sellerId,
-  value: e.value,
-  points: e.points,
-  note: e.note,
-  date: e.date,
-  created_at: e.createdAt,
-});
-export const rowToEntry = (r: EntryRow): Entry => ({
+const rowToEntry = (r: EntryRow): Entry => ({
   id: r.id,
   type: r.type,
-  sellerId: r.seller_id,
-  value: Number(r.value),
+  sellerId: r.sellerId,
+  value: r.value,
   points: r.points,
   note: r.note,
   date: r.date,
-  createdAt: r.created_at,
+  createdAt: r.createdAt ?? Date.now(),
 });
 
-export const settingsToRow = (s: Settings) => ({
-  reais_per_point: s.reaisPerPoint,
-  points_per_indicacao: s.pointsPerIndicacao,
-});
-export const rowToSettings = (r: SettingsRow): Settings => ({
-  reaisPerPoint: r.reais_per_point,
-  pointsPerIndicacao: r.points_per_indicacao,
-});
+/* ------------------------------------------------------------------ */
+/* Referências                                                         */
+/* ------------------------------------------------------------------ */
 
-export const DEFAULT_SETTINGS: Settings = { reaisPerPoint: 100, pointsPerIndicacao: 5 };
+const SETTINGS_DOC = doc(db, "settings", "app");
+const teamsCol = collection(db, "teams");
+const sellersCol = collection(db, "sellers");
+const entriesCol = collection(db, "entries");
+
+const warn = (err: unknown) => console.warn("Firestore:", err);
 
 /* ------------------------------------------------------------------ */
 /* Carga inicial                                                       */
 /* ------------------------------------------------------------------ */
 
 export async function fetchInitialState(): Promise<AppState> {
-  const [teamsRes, sellersRes, entriesRes, settingsRes] = await Promise.all([
-    supabase!.from("teams").select("*").order("created_at"),
-    supabase!.from("sellers").select("*").order("created_at"),
-    supabase!.from("entries").select("*"),
-    supabase!.from("settings").select("*").limit(1),
+  const [teamsSnap, sellersSnap, entriesSnap, settingsSnap] = await Promise.all([
+    getDocs(teamsCol),
+    getDocs(sellersCol),
+    getDocs(entriesCol),
+    getDoc(SETTINGS_DOC),
   ]);
 
-  const firstError =
-    teamsRes.error ?? sellersRes.error ?? entriesRes.error ?? settingsRes.error;
-  if (firstError) throw new Error(firstError.message);
-
   let settings = DEFAULT_SETTINGS;
-  const srow = (settingsRes.data as SettingsRow[])[0];
-  if (srow) {
-    settings = rowToSettings(srow);
+  if (settingsSnap.exists()) {
+    settings = { ...DEFAULT_SETTINGS, ...(settingsSnap.data() as Partial<Settings>) };
   } else {
-    // Primeira execução: cria a linha de regras padrão.
-    await supabase!
-      .from("settings")
-      .insert({ id: "app", ...settingsToRow(DEFAULT_SETTINGS) });
+    // Primeira execução: cria as regras padrão na nuvem.
+    await setDoc(SETTINGS_DOC, DEFAULT_SETTINGS);
   }
 
+  const byCreated = (a: { createdAt?: number }, b: { createdAt?: number }) =>
+    (a.createdAt ?? 0) - (b.createdAt ?? 0);
+
   return {
-    teams: (teamsRes.data as TeamRow[]).map(rowToTeam),
-    sellers: (sellersRes.data as SellerRow[]).map(rowToSeller),
-    entries: (entriesRes.data as EntryRow[]).map(rowToEntry),
+    teams: teamsSnap.docs
+      .map((d) => rowToTeam({ ...(d.data() as Omit<TeamRow, "id">), id: d.id }))
+      .sort(byCreated),
+    sellers: sellersSnap.docs
+      .map((d) => rowToSeller({ ...(d.data() as Omit<SellerRow, "id">), id: d.id }))
+      .sort(byCreated),
+    entries: entriesSnap.docs.map((d) =>
+      rowToEntry({ ...(d.data() as Omit<EntryRow, "id">), id: d.id })
+    ),
     settings,
   };
 }
 
 /* ------------------------------------------------------------------ */
-/* Realtime (postgres_changes)                                         */
+/* Realtime (onSnapshot)                                               */
 /* ------------------------------------------------------------------ */
 
 export type ArenaTable = "teams" | "sellers" | "entries";
@@ -138,73 +132,103 @@ export type ChangeEvent = "INSERT" | "UPDATE" | "DELETE";
 
 export function subscribeArena(
   onRow: (table: ArenaTable, event: ChangeEvent, row: TeamRow | SellerRow | EntryRow) => void,
-  onSettings: (row: SettingsRow) => void,
-  onStatus: (status: "online" | "offline") => void
+  onSettings: (row: SettingsRow) => void
 ): () => void {
-  const channel = supabase!.channel("arena-sync");
-
-  const bind = (table: ArenaTable) =>
-    channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table },
-      (payload: any) => {
-        const row = payload.eventType === "DELETE" ? payload.old : payload.new;
-        if (row) onRow(table, payload.eventType as ChangeEvent, row);
-      }
-    );
-
-  bind("teams");
-  bind("sellers");
-  bind("entries");
-
-  channel.on(
-    "postgres_changes",
-    { event: "*", schema: "public", table: "settings" },
-    (payload: any) => {
-      if (payload.new) onSettings(payload.new as SettingsRow);
-    }
-  );
-
-  channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") onStatus("online");
-    if (status === "TIMED_OUT" || status === "CHANNEL_ERROR" || status === "CLOSED") {
-      onStatus("offline");
-    }
-  });
-
-  return () => {
-    supabase!.removeChannel(channel);
+  const emit = (snap: QuerySnapshot<DocumentData>, table: ArenaTable) => {
+    snap.docChanges().forEach((change) => {
+      const event: ChangeEvent =
+        change.type === "added" ? "INSERT" : change.type === "modified" ? "UPDATE" : "DELETE";
+      onRow(table, event, { ...(change.doc.data() as object), id: change.doc.id } as never);
+    });
   };
+
+  const unsubs = [
+    onSnapshot(teamsCol, (snap) => emit(snap, "teams"), warn),
+    onSnapshot(sellersCol, (snap) => emit(snap, "sellers"), warn),
+    onSnapshot(entriesCol, (snap) => emit(snap, "entries"), warn),
+    onSnapshot(
+      SETTINGS_DOC,
+      (snap) => {
+        if (snap.exists()) {
+          onSettings({ ...DEFAULT_SETTINGS, ...(snap.data() as Partial<SettingsRow>) });
+        }
+      },
+      warn
+    ),
+  ];
+
+  return () => unsubs.forEach((u) => u());
 }
 
 /* ------------------------------------------------------------------ */
-/* Gravações                                                           */
+/* Gravações (todas retornam Promise<void> com log de erro interno)    */
 /* ------------------------------------------------------------------ */
 
-export const insertTeam = (t: Team) => supabase!.from("teams").insert([teamToRow(t)]);
+export const insertTeam = (t: Team) =>
+  setDoc(doc(db, "teams", t.id), {
+    name: t.name,
+    color: t.color,
+    createdAt: t.createdAt ?? Date.now(),
+  }).catch(warn);
 
 export const updateTeam = (id: string, patch: { name?: string; color?: string }) =>
-  supabase!.from("teams").update(patch).eq("id", id);
+  setDoc(doc(db, "teams", id), patch, { merge: true }).catch(warn);
 
-export const deleteTeam = (id: string) => supabase!.from("teams").delete().eq("id", id);
 
-export const insertSeller = (s: Seller) => supabase!.from("sellers").insert([sellerToRow(s)]);
 
-export const deleteSeller = (id: string) => supabase!.from("sellers").delete().eq("id", id);
+export const insertSeller = (s: Seller) =>
+  setDoc(doc(db, "sellers", s.id), {
+    name: s.name,
+    teamId: s.teamId,
+    createdAt: s.createdAt ?? Date.now(),
+  }).catch(warn);
 
-export const insertEntry = (e: Entry) => supabase!.from("entries").insert([entryToRow(e)]);
-
-export const deleteEntry = (id: string) => supabase!.from("entries").delete().eq("id", id);
+export const insertEntry = (e: Entry) =>
+  setDoc(doc(db, "entries", e.id), {
+    type: e.type,
+    sellerId: e.sellerId,
+    value: e.value,
+    points: e.points,
+    note: e.note,
+    date: e.date,
+    createdAt: e.createdAt,
+  }).catch(warn);
 
 export const updateSettings = (s: Settings) =>
-  supabase!.from("settings").update(settingsToRow(s)).eq("id", "app");
+  setDoc(SETTINGS_DOC, { reaisPerPoint: s.reaisPerPoint, pointsPerIndicacao: s.pointsPerIndicacao }, { merge: true }).catch(warn);
 
-export const deleteAllEntries = () => supabase!.from("entries").delete().neq("id", "");
-
-export async function deleteAllTeamsAndSellers() {
-  await supabase!.from("sellers").delete().neq("id", "");
-  await supabase!.from("teams").delete().neq("id", "");
+async function deleteCollection(col: CollectionReference): Promise<void> {
+  const snap = await getDocs(col);
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
 }
 
-export const insertManyTeams = (teams: Team[]) =>
-  supabase!.from("teams").insert(teams.map(teamToRow));
+export const deleteEntry = (id: string) => deleteById("entries", id);
+export const deleteSeller = (id: string) => deleteById("sellers", id);
+export const deleteTeamRow = (id: string) => deleteById("teams", id);
+
+function deleteById(colName: "teams" | "sellers" | "entries", id: string) {
+  return deleteDoc(doc(db, colName, id)).catch(warn);
+}
+
+export const deleteAllEntries = () => deleteCollection(entriesCol).catch(warn);
+
+export async function deleteAllTeamsAndSellers(): Promise<void> {
+  await deleteCollection(sellersCol).catch(warn);
+  await deleteCollection(teamsCol).catch(warn);
+}
+
+export async function insertManyTeams(teams: Team[]): Promise<void> {
+  const batch = writeBatch(db);
+  teams.forEach((t) => {
+    batch.set(doc(db, "teams", t.id), {
+      name: t.name,
+      color: t.color,
+      createdAt: t.createdAt ?? Date.now(),
+    });
+  });
+  await batch.commit().catch(warn);
+}
