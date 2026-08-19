@@ -18,7 +18,7 @@ import type {
 } from "../types";
 import { uid } from "./utils";
 
-const STORAGE_KEY = "arena-vendas-state-v3";
+const STORAGE_KEY = "arena-vendas-state-v4";
 
 /* ------------------------------------------------------------------ */
 /* seed: as 5 equipes da temporada, começando tudo zerado              */

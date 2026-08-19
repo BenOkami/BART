@@ -1,14 +1,11 @@
 import { useMemo, useState } from "react";
-import type { AppState, EntryType } from "../types";
+import type { AppState } from "../types";
 import { sortedEntries } from "../lib/store";
 import { fmtBRL, fmtDate, fmtInt } from "../lib/utils";
 import { TeamTag, TypeBadge, useToast } from "./ui";
-import { IconCoins, IconHandshake, IconTrash } from "./icons";
-
-type Filter = "all" | EntryType;
+import { IconCoins, IconTrash } from "./icons";
 
 export default function EntriesView({ state, onDelete }: { state: AppState; onDelete: (id: string) => void }) {
-  const [filter, setFilter] = useState<Filter>("all");
   const [teamFilter, setTeamFilter] = useState("");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const toast = useToast();
@@ -21,23 +18,22 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
   const filtered = useMemo(
     () =>
       entries.filter((e) => {
-        if (filter !== "all" && e.type !== filter) return false;
         if (teamFilter) {
           const seller = sellerById.get(e.sellerId);
           if (!seller || seller.teamId !== teamFilter) return false;
         }
         return true;
       }),
-    [entries, filter, teamFilter, sellerById]
+    [entries, teamFilter, sellerById]
   );
 
   const totals = useMemo(() => {
-    let value = 0, sales = 0, inds = 0, pts = 0;
+    let value = 0, sales = 0, pts = 0;
     for (const e of filtered) {
       pts += e.points;
-      if (e.type === "venda") { sales += 1; value += e.value; } else inds += 1;
+      if (e.type === "venda") { sales += 1; value += e.value; }
     }
-    return { value, sales, inds, pts };
+    return { value, sales, pts };
   }, [filtered]);
 
   const handleDelete = (id: string) => {
@@ -50,23 +46,9 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
     <div className="space-y-6">
       {/* filtros */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex overflow-hidden rounded-md border border-line">
-          {([
-            { k: "all", label: "Todos" },
-            { k: "venda", label: "Vendas" },
-            { k: "indicacao", label: "Indicações" },
-          ] as { k: Filter; label: string }[]).map(({ k, label }) => (
-            <button
-              key={k}
-              onClick={() => setFilter(k)}
-              className={`px-4 py-2 text-[12px] font-black uppercase tracking-wider transition-colors ${
-                filter === k ? "bg-gold text-ink-950" : "text-muted hover:text-paper hover:bg-ink-800"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <span className="inline-flex items-center gap-2 rounded-md border border-gold/40 bg-gold/10 px-3 py-2 text-[12px] font-black uppercase tracking-wider text-gold">
+          <IconCoins size={14} /> Lançamentos de vendas
+        </span>
         <select
           value={teamFilter}
           onChange={(e) => setTeamFilter(e.target.value)}
@@ -83,10 +65,9 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
       </div>
 
       {/* resumo do filtro */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <SummaryCard label="Volume filtrado" value={fmtBRL(totals.value)} accent="#f6c453" />
         <SummaryCard label="Vendas" value={fmtInt(totals.sales)} accent="#ff6b4a" />
-        <SummaryCard label="Indicações" value={fmtInt(totals.inds)} accent="#4cc9f0" />
         <SummaryCard label="Pontos somados" value={fmtInt(totals.pts)} accent="#a8e34d" />
       </div>
 
@@ -96,7 +77,7 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
           {entries.length === 0 ? (
             <>
               <p className="font-display uppercase tracking-wide text-xl text-muted">Nenhum lançamento ainda</p>
-              <p className="text-sm text-faint mt-2">Use o botão <strong className="text-gold">Lançar resultado</strong> para registrar a primeira venda ou indicação.</p>
+              <p className="text-sm text-faint mt-2">Use o botão <strong className="text-gold">Lançar</strong> para registrar a primeira venda.</p>
             </>
           ) : (
             <p className="text-sm text-muted">Nenhum lançamento combina com os filtros escolhidos.</p>
@@ -165,7 +146,7 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
 
       <p className="flex items-center gap-2 text-[12px] font-semibold text-faint">
         <IconCoins size={14} className="text-gold/70" />
-        Vendas somam no volume da equipe · <IconHandshake size={14} className="text-sky/70" /> indicações contam no ranking de indicações.
+        Cada venda soma no volume e nos pontos da equipe e do vendedor.
       </p>
     </div>
   );

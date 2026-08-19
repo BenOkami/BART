@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AppState, Settings, Team } from "../types";
 import { getSellerStats, getTeamStats } from "../lib/store";
-import { fmtInt, useReveal } from "../lib/utils";
+import { fmtBRL, fmtInt, useReveal } from "../lib/utils";
 import { Avatar, Modal, useToast } from "./ui";
 import { IconGear, IconPlus, IconTrash, IconUsers } from "./icons";
 
@@ -156,7 +156,7 @@ export default function TeamsView({
                     {/* números */}
                     <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                       <MiniStat label="Vendas" value={fmtInt(st.sales)} color="#f6c453" />
-                      <MiniStat label="Indicações" value={fmtInt(st.indications)} color="#4cc9f0" />
+                      <MiniStat label="Volume" value={fmtBRL(st.saleValue)} color="#4cc9f0" />
                       <MiniStat label="Vendedores" value={fmtInt(st.members)} color={team.color} />
                     </div>
 
@@ -200,7 +200,7 @@ export default function TeamsView({
           <IconGear size={14} /> Como o placar pontua
         </p>
         <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wide text-paper mt-1 mb-4">Regras de pontuação</h2>
-        <div className="grid gap-4 sm:grid-cols-2 max-w-2xl">
+        <div className="max-w-md">
           <div className="rounded-lg border border-line-soft bg-ink-900/75 p-5">
             <label htmlFor="reais" className="text-[11px] font-black uppercase tracking-[0.18em] text-muted">
               1 ponto de venda a cada
@@ -217,23 +217,6 @@ export default function TeamsView({
               />
             </div>
             <p className="mt-2 text-[12px] font-semibold text-faint">Ex.: venda de R$ 1.500 = {fmtInt(Math.max(1, Math.round(1500 / state.settings.reaisPerPoint)))} pontos.</p>
-          </div>
-          <div className="rounded-lg border border-line-soft bg-ink-900/75 p-5">
-            <label htmlFor="ind" className="text-[11px] font-black uppercase tracking-[0.18em] text-muted">
-              Pontos por indicação
-            </label>
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                id="ind"
-                type="number"
-                min={1}
-                value={state.settings.pointsPerIndicacao}
-                onChange={(e) => onSetSettings({ ...state.settings, pointsPerIndicacao: Math.max(1, Number(e.target.value) || 1) })}
-                className="w-28 rounded-md border border-line bg-ink-950/70 px-3 py-2 font-display tnum text-xl text-paper outline-none focus:border-gold/70"
-              />
-              <span className="font-display text-lg text-sky">pts</span>
-            </div>
-            <p className="mt-2 text-[12px] font-semibold text-faint">Cada indicação registrada soma no vendedor e na equipe.</p>
           </div>
         </div>
         <p className="mt-3 text-[12px] font-semibold text-faint">As regras valem para os próximos lançamentos — o histórico mantém os pontos já creditados.</p>
@@ -337,7 +320,7 @@ export default function TeamsView({
       >
         <div className="space-y-5">
           <p className="text-[15px] text-paper leading-relaxed">
-            Tem certeza? Todas as <strong className="text-coral">vendas e indicações lançadas</strong> serão apagadas e o placar volta do zero.
+            Tem certeza? Todas as <strong className="text-coral">vendas lançadas</strong> serão apagadas e o placar volta do zero.
           </p>
           <div className="flex gap-3">
             <button

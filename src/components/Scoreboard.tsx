@@ -13,10 +13,8 @@ import {
   IconCoins,
   IconCrown,
   IconFlag,
-  IconHandshake,
   IconPlus,
   IconSpark,
-  IconTarget,
   IconTrophy,
 } from "./icons";
 
@@ -60,14 +58,13 @@ function StatBlock({
 }
 
 /* ------------------------------------------------------------------ */
-/* ranking de equipes (por volume vendido; empate → indicações)        */
+/* ranking de equipes (por volume vendido; empate → nº de vendas)      */
 /* ------------------------------------------------------------------ */
 
 interface TeamRow {
   team: Team;
   sales: number;
   saleValue: number;
-  indications: number;
   members: number;
 }
 
@@ -129,7 +126,14 @@ function TeamRanking({ rows, onLaunch }: { rows: TeamRow[]; onLaunch: () => void
                   />
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] font-semibold text-muted">
-                  <span className="inline-flex items-center gap-1"><IconCoins size={12} className="text-gold" /> {r.sales} {r.sales === 1 ? "venda fechada" : "vendas fechadas"}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <IconCoins size={12} className="text-gold" /> {r.sales} {r.sales === 1 ? "venda fechada" : "vendas fechadas"}
+                  </span>
+                  {r.sales > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <IconBolt size={12} className="text-coral" /> ticket médio {fmtBRL(r.saleValue / r.sales)}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right shrink-0">
@@ -137,8 +141,8 @@ function TeamRanking({ rows, onLaunch }: { rows: TeamRow[]; onLaunch: () => void
                   {fmtBRL(r.saleValue)}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-faint mt-1">volume vendido</p>
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-sky/35 bg-sky/10 px-2 py-0.5 text-[11px] font-extrabold text-sky">
-                  <IconHandshake size={12} /> {r.indications} {r.indications === 1 ? "indicação" : "indicações"}
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-gold/35 bg-gold/10 px-2 py-0.5 text-[11px] font-extrabold text-gold">
+                  <IconCoins size={12} /> {r.sales} {r.sales === 1 ? "venda" : "vendas"}
                 </p>
               </div>
             </div>
@@ -147,7 +151,7 @@ function TeamRanking({ rows, onLaunch }: { rows: TeamRow[]; onLaunch: () => void
       })}
 
       <p className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-faint">
-        Classificação pelo volume vendido de cada equipe — em caso de empate, decide o número de indicações.
+        Classificação pelo volume vendido de cada equipe — em caso de empate, decide o número de vendas.
       </p>
       <button
         onClick={onLaunch}
@@ -197,8 +201,8 @@ function PodiumCard({ row, place }: { row: SellerRow; place: 1 | 2 | 3 }) {
             <span className="ml-1 font-body text-[11px] font-black uppercase tracking-widest text-faint">pts</span>
           </p>
           <div className="mt-3 flex items-center justify-center gap-4 text-[12px] font-semibold text-muted">
-            <span className="inline-flex items-center gap-1"><IconCoins size={13} className="text-gold" />{row.sales} vendas</span>
-            <span className="inline-flex items-center gap-1"><IconHandshake size={13} className="text-sky" />{row.indications} indicações</span>
+            <span className="inline-flex items-center gap-1"><IconCoins size={13} className="text-gold" />{row.sales} {row.sales === 1 ? "venda" : "vendas"}</span>
+            <span className="inline-flex items-center gap-1"><IconSpark size={13} className="text-coral" />{fmtBRL(row.saleValue)}</span>
           </div>
         </div>
       </div>
@@ -270,11 +274,10 @@ function SellerRanking({
       )}
 
       <div className="overflow-hidden rounded-lg border border-line-soft bg-ink-900/70">
-        <div className="hidden grid-cols-[3rem_1fr_6.5rem_6.5rem_5.5rem] gap-3 items-center border-b border-line-soft px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-faint sm:grid">
+        <div className="hidden grid-cols-[3rem_1fr_6.5rem_5.5rem] gap-3 items-center border-b border-line-soft px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.16em] text-faint sm:grid">
           <span className="text-center">Pos</span>
           <span>Vendedor</span>
           <span className="text-right">Vendas</span>
-          <span className="text-right">Indicações</span>
           <span className="text-right">Pontos</span>
         </div>
         <div className="divide-y divide-line-soft/70">
@@ -286,7 +289,7 @@ function SellerRanking({
             return (
               <div
                 key={r.seller.id}
-                className="group grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_6.5rem_6.5rem_5.5rem] gap-3 items-center px-4 py-3 transition-colors hover:bg-ink-800/60"
+                className="group grid grid-cols-[3rem_1fr_auto] sm:grid-cols-[3rem_1fr_6.5rem_5.5rem] gap-3 items-center px-4 py-3 transition-colors hover:bg-ink-800/60"
               >
                 <span className="flex justify-center"><RankBadge rank={pos} /></span>
                 <div className="flex items-center gap-3 min-w-0">
@@ -299,7 +302,6 @@ function SellerRanking({
                   </div>
                 </div>
                 <span className="hidden sm:block text-right tnum text-sm font-bold text-gold">{fmtInt(r.sales)}</span>
-                <span className="hidden sm:block text-right tnum text-sm font-bold text-sky">{fmtInt(r.indications)}</span>
                 <span className="text-right font-display tnum text-xl text-paper">{fmtInt(r.points)}</span>
               </div>
             );
@@ -387,12 +389,11 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
   const totals = useMemo(() => {
-    let value = 0, sales = 0, inds = 0;
+    let value = 0, sales = 0;
     for (const e of state.entries) {
       if (e.type === "venda") { sales += 1; value += e.value; }
-      else inds += 1;
     }
-    return { value, sales, inds };
+    return { value, sales };
   }, [state.entries]);
 
   const teamRows: TeamRow[] = useMemo(() => {
@@ -403,11 +404,10 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
           team,
           sales: ts?.sales ?? 0,
           saleValue: ts?.saleValue ?? 0,
-          indications: ts?.indications ?? 0,
           members: ts?.members ?? 0,
         };
       })
-      .sort((a, b) => b.saleValue - a.saleValue || b.indications - a.indications);
+      .sort((a, b) => b.saleValue - a.saleValue || b.sales - a.sales);
   }, [state.teams, teamStats]);
 
   const sellerRows: SellerRow[] = useMemo(() => {
@@ -448,12 +448,11 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
           </div>
         </div>
 
-        <div ref={revStats.ref} className={`${revStats.className} mt-6 grid grid-cols-1 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-line-soft rounded-lg border border-line-soft bg-ink-900/75 overflow-hidden`} style={revStats.style}>
+        <div ref={revStats.ref} className={`${revStats.className} mt-6 grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-line-soft rounded-lg border border-line-soft bg-ink-900/75 overflow-hidden`} style={revStats.style}>
           <div className="lg:col-span-2">
             <StatBlock label="Volume vendido" value={totals.value} format={(v) => fmtBRL(v)} icon={<IconCoins size={17} />} accent="#f6c453" delay={0} hero />
           </div>
           <StatBlock label="Vendas fechadas" value={totals.sales} format={(v) => fmtInt(Math.round(v))} icon={<IconBolt size={17} />} accent="#ff6b4a" delay={120} />
-          <StatBlock label="Indicações" value={totals.inds} format={(v) => fmtInt(Math.round(v))} icon={<IconTarget size={17} />} accent="#4cc9f0" delay={240} />
         </div>
       </header>
 

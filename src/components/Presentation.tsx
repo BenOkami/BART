@@ -9,11 +9,9 @@ import {
   IconClose,
   IconCoins,
   IconCrown,
-  IconHandshake,
   IconPause,
   IconPlay,
   IconSpark,
-  IconTarget,
   IconTrophy,
 } from "./icons";
 
@@ -53,7 +51,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
     const ts = getTeamStats(state);
     return state.teams
       .map((team) => ({ team, st: ts.get(team.id)! }))
-      .sort((a, b) => b.st.saleValue - a.st.saleValue || b.st.indications - a.st.indications);
+      .sort((a, b) => b.st.saleValue - a.st.saleValue || b.st.sales - a.st.sales);
   }, [state]);
 
   const sellers = useMemo(() => {
@@ -64,17 +62,16 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
       .sort((a, b) => b.st.points - a.st.points || b.st.saleValue - a.st.saleValue);
   }, [state]);
 
-  const indRanking = useMemo(() => sellers.filter((s) => s.st.indications > 0).sort((a, b) => b.st.indications - a.st.indications || b.st.points - a.st.points), [sellers]);
   const entries = useMemo(() => sortedEntries(state), [state]);
   const sellerById = useMemo(() => new Map(state.sellers.map((s) => [s.id, s])), [state.sellers]);
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
   const totals = useMemo(() => {
-    let value = 0, sales = 0, inds = 0;
+    let value = 0, sales = 0;
     for (const e of state.entries) {
-      if (e.type === "venda") { sales += 1; value += e.value; } else inds += 1;
+      if (e.type === "venda") { sales += 1; value += e.value; }
     }
-    return { value, sales, inds };
+    return { value, sales };
   }, [state.entries]);
 
   /* paginação das equipes: todas aparecem, em páginas de até 5 */
@@ -90,14 +87,13 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
     for (let p = 0; p < teamPageCount; p++) {
       labels.push(teamPageCount > 1 ? `Equipes ${p + 1}/${teamPageCount}` : "Equipes");
     }
-    labels.push("Vendedores", "Indicações", "Últimos lances");
+    labels.push("Vendedores", "Últimos lances");
     return labels;
   }, [teamPageCount]);
   const N = slides.length;
 
   const sellersSlide = 1 + teamPageCount;
-  const indSlide = sellersSlide + 1;
-  const feedSlide = indSlide + 1;
+  const feedSlide = sellersSlide + 1;
 
   const next = () => setSlide((s) => (s + 1) % N);
   const prev = () => setSlide((s) => (s - 1 + N) % N);
@@ -136,7 +132,6 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
   const mounted = useMounted(slide);
   const leaderValue = Math.max(1, teams[0]?.st.saleValue ?? 1);
   const topSellerPts = Math.max(1, sellers[0]?.st.points ?? 1);
-  const topInd = Math.max(1, indRanking[0]?.st.indications ?? 1);
 
   return (
     <div className="fixed inset-0 z-[110] flex flex-col bg-ink-950">
@@ -187,10 +182,6 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                 <p className="font-display tnum text-4xl sm:text-6xl text-paper">{fmtInt(totals.sales)}</p>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-faint mt-2">vendas fechadas</p>
               </div>
-              <div>
-                <p className="font-display tnum text-4xl sm:text-6xl text-sky">{fmtInt(totals.inds)}</p>
-                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-faint mt-2">indicações</p>
-              </div>
             </div>
             <div className="mt-10 flex flex-wrap items-center gap-2">
               {state.teams.map((t) => (
@@ -234,7 +225,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                           />
                         </div>
                         <p className="mt-1.5 text-[12px] sm:text-sm font-bold text-muted">
-                          {st.sales} {st.sales === 1 ? "venda fechada" : "vendas fechadas"} · {st.indications} {st.indications === 1 ? "indicação" : "indicações"} · {st.members} {st.members === 1 ? "vendedor" : "vendedores"}
+                          {st.sales} {st.sales === 1 ? "venda fechada" : "vendas fechadas"} · {st.members} {st.members === 1 ? "vendedor" : "vendedores"}
                         </p>
                       </div>
                     </div>
@@ -257,8 +248,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                       <p className="font-display text-xl sm:text-2xl uppercase tracking-wide text-paper truncate">{seller.name}</p>
                       <div className="flex items-center gap-2.5 mt-0.5">
                         <TeamTag team={team} small />
-                        <span className="text-[12px] font-bold text-muted inline-flex items-center gap-1"><IconCoins size={12} className="text-gold" />{st.sales}</span>
-                        <span className="text-[12px] font-bold text-muted inline-flex items-center gap-1"><IconHandshake size={12} className="text-sky" />{st.indications}</span>
+                        <span className="text-[12px] font-bold text-muted inline-flex items-center gap-1"><IconCoins size={12} className="text-gold" />{st.sales} {st.sales === 1 ? "venda" : "vendas"}</span>
                       </div>
                       <div className="mt-1.5 h-2 w-full overflow-hidden rounded-sm bg-ink-900 border border-line-soft/50">
                         <div
@@ -275,45 +265,6 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                   </div>
                 ))}
                 {sellers.length === 0 && <p className="text-muted text-lg font-semibold">Cadastre vendedores para ver este slide.</p>}
-              </div>
-            </SlideShell>
-          </div>
-        )}
-
-        {slide === indSlide && (
-          <div key="s3" className="slide-enter h-full">
-            <SlideShell kicker="Quem traz gente nova" title="Radar de indicações" icon={<IconTarget size={18} />}>
-              <div className="max-w-5xl">
-                <div className="flex flex-wrap gap-x-14 gap-y-4 mb-8">
-                  <div>
-                    <p className="font-display tnum text-5xl sm:text-7xl text-sky">{fmtInt(totals.inds)}</p>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-faint mt-2">indicações no total</p>
-                  </div>
-                  <div>
-                    <p className="font-display tnum text-5xl sm:text-7xl text-paper">{fmtInt(totals.inds * state.settings.pointsPerIndicacao)}</p>
-                    <p className="text-[11px] font-black uppercase tracking-[0.24em] text-faint mt-2">pontos gerados</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {indRanking.slice(0, 6).map(({ seller, team, st }, i) => (
-                    <div key={seller.id} className="flex items-center gap-4">
-                      <span className={`font-display text-3xl w-9 text-center shrink-0 ${i === 0 ? "rank-ghost-gold" : "rank-ghost"}`}>{i + 1}</span>
-                      <Avatar name={seller.name} color={team?.color ?? "#8fa0c6"} size={44} />
-                      <p className="font-display text-xl sm:text-2xl uppercase tracking-wide text-paper truncate w-56 sm:w-72">{seller.name}</p>
-                      <TeamTag team={team} small />
-                      <div className="ml-auto flex items-center gap-3 shrink-0">
-                        <div className="h-3 w-28 sm:w-56 overflow-hidden rounded-sm bg-ink-900 border border-line-soft/50">
-                          <div
-                            className="bar-fill h-full rounded-sm bg-sky"
-                            style={{ width: mounted ? `${(st.indications / topInd) * 100}%` : "0%", transitionDelay: `${i * 120}ms` }}
-                          />
-                        </div>
-                        <p className="font-display tnum text-3xl text-sky w-12 text-right">{st.indications}</p>
-                      </div>
-                    </div>
-                  ))}
-                  {indRanking.length === 0 && <p className="text-muted text-lg font-semibold">Nenhuma indicação registrada ainda.</p>}
-                </div>
               </div>
             </SlideShell>
           </div>
