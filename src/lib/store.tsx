@@ -16,77 +16,28 @@ import type {
   Team,
   TeamStats,
 } from "../types";
-import { daysAgoISO, uid } from "./utils";
+import { uid } from "./utils";
 
-const STORAGE_KEY = "arena-vendas-state-v2";
+const STORAGE_KEY = "arena-vendas-state-v3";
 
 /* ------------------------------------------------------------------ */
-/* seed: as 5 equipes da temporada                                     */
+/* seed: as 5 equipes da temporada, começando tudo zerado              */
 /* ------------------------------------------------------------------ */
-
-/** RNG determinístico para a demonstração ser estável. */
-function mulberry32(a: number) {
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 export function seedState(): AppState {
   const settings: Settings = { reaisPerPoint: 100, pointsPerIndicacao: 5 };
 
   const teamDefs = [
-    { name: "Jacaré", color: "#a8e34d", members: ["Marcos Ferreira", "Juliana Castro", "Pedro Almeida"] },
-    { name: "Tubarão", color: "#4cc9f0", members: ["Renata Souza", "Carlos Eduardo Lima", "Fernanda Rocha"] },
-    { name: "Capivara", color: "#ffc53d", members: ["Thiago Barbosa", "Larissa Mendes", "Gustavo Nunes"] },
-    { name: "Águia", color: "#b78bff", members: ["Camila Duarte", "Rafael Teixeira", "Beatriz Carvalho"] },
-    { name: "Lobo", color: "#c9d4e8", members: ["André Martins", "Paula Ribeiro", "Diego Santana"] },
+    { name: "Jacaré", color: "#a8e34d" },
+    { name: "Tubarão", color: "#4cc9f0" },
+    { name: "Capivara", color: "#ffc53d" },
+    { name: "Águia", color: "#b78bff" },
+    { name: "Lobo", color: "#c9d4e8" },
   ];
 
   const teams: Team[] = teamDefs.map((t) => ({ id: uid(), name: t.name, color: t.color }));
-  const sellers = teamDefs.flatMap((t, ti) =>
-    t.members.map((name) => ({ id: uid(), name, teamId: teams[ti].id }))
-  );
 
-  const notes = ["plano anual", "upgrade de plano", "renovação antecipada", "fechamento relâmpago", ""];
-  const rnd = mulberry32(20260212);
-  const entries: Entry[] = [];
-  let seq = 0;
-
-  for (const seller of sellers) {
-    const saleCount = 2 + Math.floor(rnd() * 2); // 2–3 vendas
-    for (let i = 0; i < saleCount; i++) {
-      const value = Math.round((900 + rnd() * 4300) / 10) * 10;
-      entries.push({
-        id: uid(),
-        type: "venda",
-        sellerId: seller.id,
-        value,
-        points: Math.max(1, Math.round(value / settings.reaisPerPoint)),
-        note: notes[Math.floor(rnd() * notes.length)],
-        date: daysAgoISO(Math.floor(rnd() * 12)),
-        createdAt: Date.now() - seq++ * 60_000,
-      });
-    }
-    const indCount = Math.floor(rnd() * 5); // 0–4 indicações
-    for (let i = 0; i < indCount; i++) {
-      entries.push({
-        id: uid(),
-        type: "indicacao",
-        sellerId: seller.id,
-        value: 0,
-        points: settings.pointsPerIndicacao,
-        note: "",
-        date: daysAgoISO(Math.floor(rnd() * 12)),
-        createdAt: Date.now() - seq++ * 60_000,
-      });
-    }
-  }
-
-  return { teams, sellers, entries, settings };
+  return { teams, sellers: [], entries: [], settings };
 }
 
 /* ------------------------------------------------------------------ */

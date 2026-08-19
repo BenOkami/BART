@@ -247,10 +247,10 @@ export default function TeamsView({
         <h2 className="font-display text-2xl sm:text-3xl uppercase tracking-wide text-paper mt-1 mb-4">Recomeçar a temporada</h2>
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => { onResetDemo(); toast.push("Demonstração restaurada com dados de exemplo.", "sky"); }}
+            onClick={() => { onResetDemo(); toast.push("Equipes restauradas: Jacaré, Tubarão, Capivara, Águia e Lobo — tudo zerado.", "sky"); }}
             className="rounded-md border border-sky/50 px-4 py-2.5 text-[13px] font-black uppercase tracking-wider text-sky transition-colors hover:bg-sky/10"
           >
-            Restaurar demonstração
+            Restaurar equipes padrão
           </button>
           <button
             onClick={() => setDangerOpen(true)}

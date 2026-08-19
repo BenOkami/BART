@@ -118,7 +118,7 @@ export default function LaunchModal({ open, onClose }: { open: boolean; onClose:
             })}
           </select>
           {state.sellers.length === 0 && (
-            <p className="mt-1.5 text-[12px] font-semibold text-coral">Nenhum vendedor cadastrado — crie equipes na aba "Equipes".</p>
+            <p className="mt-1.5 text-[12px] font-semibold text-coral">Nenhum vendedor cadastrado — adicione vendedores às equipes na aba "Equipes".</p>
           )}
         </div>
 

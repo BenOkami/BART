@@ -469,7 +469,7 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
           <div className="overflow-hidden rounded-lg border border-line-soft bg-ink-900/70 divide-y divide-line-soft/70">
             {entries.length === 0 && (
               <p className="px-5 py-10 text-center text-sm text-muted">
-                Nenhum lançamento ainda. Clique em <strong className="text-gold">Lançar resultado</strong> para abrir o placar.
+                Nenhum lançamento ainda. Adicione vendedores na aba <strong className="text-paper">Equipes</strong> e clique em <strong className="text-gold">Lançar resultado</strong> para abrir o placar.
               </p>
             )}
             {entries.slice(0, 7).map((e, i) => {
