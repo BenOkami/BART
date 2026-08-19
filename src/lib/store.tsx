@@ -185,19 +185,15 @@ export function sortedEntries(state: AppState): Entry[] {
 export function getSellerStats(state: AppState): Map<string, SellerStats> {
   const map = new Map<string, SellerStats>();
   for (const s of state.sellers) {
-    map.set(s.id, { sellerId: s.id, points: 0, sales: 0, saleValue: 0, indications: 0 });
+    map.set(s.id, { sellerId: s.id, points: 0, sales: 0, saleValue: 0 });
   }
   const sellerById = new Map(state.sellers.map((s) => [s.id, s]));
   for (const e of state.entries) {
-    if (!sellerById.has(e.sellerId)) continue;
+    if (!sellerById.has(e.sellerId) || e.type !== "venda") continue;
     const st = map.get(e.sellerId)!;
     st.points += e.points;
-    if (e.type === "venda") {
-      st.sales += 1;
-      st.saleValue += e.value;
-    } else {
-      st.indications += 1;
-    }
+    st.sales += 1;
+    st.saleValue += e.value;
   }
   return map;
 }
@@ -205,7 +201,7 @@ export function getSellerStats(state: AppState): Map<string, SellerStats> {
 export function getTeamStats(state: AppState): Map<string, TeamStats> {
   const map = new Map<string, TeamStats>();
   for (const t of state.teams) {
-    map.set(t.id, { teamId: t.id, points: 0, sales: 0, saleValue: 0, indications: 0, members: 0 });
+    map.set(t.id, { teamId: t.id, points: 0, sales: 0, saleValue: 0, members: 0 });
   }
   const teamBySeller = new Map(state.sellers.map((s) => [s.id, s.teamId]));
   for (const s of state.sellers) {
@@ -214,16 +210,12 @@ export function getTeamStats(state: AppState): Map<string, TeamStats> {
   }
   for (const e of state.entries) {
     const teamId = teamBySeller.get(e.sellerId);
-    if (!teamId) continue;
+    if (!teamId || e.type !== "venda") continue;
     const st = map.get(teamId);
     if (!st) continue;
     st.points += e.points;
-    if (e.type === "venda") {
-      st.sales += 1;
-      st.saleValue += e.value;
-    } else {
-      st.indications += 1;
-    }
+    st.sales += 1;
+    st.saleValue += e.value;
   }
   return map;
 }

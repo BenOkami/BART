@@ -16,7 +16,7 @@ export interface Entry {
   id: string;
   type: EntryType;
   sellerId: string;
-  /** Valor em R$ (apenas para vendas; 0 para indicações) */
+  /** Valor em R$ da venda */
   value: number;
   /** Pontos creditados no momento do lançamento */
   points: number;
@@ -29,7 +29,7 @@ export interface Entry {
 export interface Settings {
   /** 1 ponto a cada R$ X em vendas */
   reaisPerPoint: number;
-  /** Pontos fixos por indicação registrada */
+  /** Reservado para regras futuras de pontuação fixa */
   pointsPerIndicacao: number;
 }
 
@@ -45,7 +45,6 @@ export interface SellerStats {
   points: number;
   sales: number;
   saleValue: number;
-  indications: number;
 }
 
 export interface TeamStats {
@@ -53,7 +52,6 @@ export interface TeamStats {
   points: number;
   sales: number;
   saleValue: number;
-  indications: number;
   members: number;
 }
 

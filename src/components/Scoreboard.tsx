@@ -415,7 +415,7 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
       .map((seller) => ({
         seller,
         team: teamById.get(seller.teamId),
-        ...(sellerStats.get(seller.id) ?? { sellerId: seller.id, points: 0, sales: 0, saleValue: 0, indications: 0 }),
+        ...(sellerStats.get(seller.id) ?? { sellerId: seller.id, points: 0, sales: 0, saleValue: 0 }),
       }))
       .sort((a, b) => b.points - a.points || b.saleValue - a.saleValue);
   }, [state.sellers, sellerStats, teamById]);
