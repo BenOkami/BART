@@ -11,7 +11,7 @@ import { IconBolt, IconCoins, IconFlag, IconPlus, IconScreen } from "./component
 type Tab = "placar" | "lancamentos" | "equipes";
 
 function Shell() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, loading, status } = useStore();
   const toast = useToast();
   const [tab, setTab] = useState<Tab>("placar");
   const [launchOpen, setLaunchOpen] = useState(false);
@@ -22,6 +22,14 @@ function Shell() {
     { id: "lancamentos", label: "Lançamentos", icon: <IconCoins size={15} /> },
     { id: "equipes", label: "Equipes", icon: <IconFlag size={15} /> },
   ];
+
+  const statusInfo: Record<string, { cls: string; dot: string; label: string; pulse?: boolean }> = {
+    connecting: { cls: "text-amber border-amber/40", dot: "bg-amber", label: "Conectando…", pulse: true },
+    online: { cls: "text-lime border-lime/40", dot: "bg-lime", label: "Nuvem ativa" },
+    offline: { cls: "text-coral border-coral/40", dot: "bg-coral", label: "Offline" },
+    error: { cls: "text-coral border-coral/40", dot: "bg-coral", label: "Modo local" },
+  };
+  const st = statusInfo[status];
 
   return (
     <div className="relative min-h-screen text-paper">
@@ -61,6 +69,13 @@ function Shell() {
             </nav>
 
             <div className="flex items-center gap-2">
+              <span
+                title="Status da sincronização em tempo real"
+                className={`hidden md:inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest ${st.cls}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${st.dot} ${st.pulse ? "animate-pulse" : ""}`} />
+                {st.label}
+              </span>
               <button
                 onClick={() => setPresenting(true)}
                 className="group hidden sm:inline-flex items-center gap-2 rounded-md border border-line px-3.5 py-2 text-[13px] font-bold uppercase tracking-wider text-muted transition-all duration-200 hover:border-gold/60 hover:text-gold"
@@ -82,6 +97,12 @@ function Shell() {
 
       {/* conteúdo */}
       <main className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        {(status === "offline" || status === "error") && !loading && (
+          <div className="mt-4 rounded-md border border-amber/40 bg-amber/10 px-4 py-2.5 text-[13px] font-bold text-amber">
+            Sem conexão com a nuvem — as alterações ficam salvas apenas neste dispositivo até a conexão voltar.
+          </div>
+        )}
+
         {tab === "placar" && <Scoreboard state={state} onLaunch={() => setLaunchOpen(true)} />}
 
         {tab === "lancamentos" && (
@@ -115,7 +136,7 @@ function Shell() {
       <footer className="border-t border-line-soft py-6">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-faint">
           <span>Arena de Vendas · placar de equipes e vendedores</span>
-          <span>Os dados ficam salvos neste navegador</span>
+          <span>Placar sincronizado em tempo real na nuvem (Firebase)</span>
         </div>
       </footer>
 
@@ -147,6 +168,23 @@ function Shell() {
             toast.push("Apresentação encerrada.", "sky");
           }}
         />
+      )}
+
+      {/* tela de conexão inicial */}
+      {loading && (
+        <div className="fixed inset-0 z-[150] flex flex-col items-center justify-center bg-ink-950">
+          <div className="arena-bg absolute inset-0" />
+          <div className="grid-layer absolute inset-0" />
+          <span className="relative flex h-16 w-16 animate-pulse items-center justify-center rounded-xl bg-gold text-ink-950 shadow-[0_0_50px_rgba(246,196,83,0.5)]">
+            <IconBolt size={34} />
+          </span>
+          <p className="relative font-display mt-6 text-2xl uppercase tracking-[0.18em] text-paper">
+            Conectando à arena…
+          </p>
+          <p className="relative mt-2 text-sm font-semibold text-muted">
+            Sincronizando o placar na nuvem
+          </p>
+        </div>
       )}
     </div>
   );

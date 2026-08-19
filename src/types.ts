@@ -4,12 +4,16 @@ export interface Team {
   id: string;
   name: string;
   color: string;
+  /** usado para manter a ordem de criação na sincronização */
+  createdAt?: number;
 }
 
 export interface Seller {
   id: string;
   name: string;
   teamId: string;
+  /** usado para manter a ordem de criação na sincronização */
+  createdAt?: number;
 }
 
 export interface Entry {
