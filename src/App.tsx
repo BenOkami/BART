@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { StoreProvider, useStore } from "./lib/store";
+import { StoreProvider, seedState, useStore } from "./lib/store";
+import { uid } from "./lib/utils";
 import { AmbientBackground, fireConfetti, ToastProvider, useToast } from "./components/ui";
 import Scoreboard from "./components/Scoreboard";
 import LaunchModal from "./components/LaunchModal";
@@ -115,15 +116,19 @@ function Shell() {
           <div className="pt-8">
             <TeamsView
               state={state}
-              onAddTeam={(name, color) => dispatch({ type: "ADD_TEAM", name, color })}
+              onAddTeam={(name, color) =>
+                dispatch({ type: "ADD_TEAM", team: { id: uid(), name, color, createdAt: Date.now() } })
+              }
               onRenameTeam={(id, name) => dispatch({ type: "RENAME_TEAM", id, name })}
               onSetTeamColor={(id, color) => dispatch({ type: "SET_TEAM_COLOR", id, color })}
               onDeleteTeam={(id) => dispatch({ type: "DELETE_TEAM", id })}
-              onAddSeller={(name, teamId) => dispatch({ type: "ADD_SELLER", name, teamId })}
+              onAddSeller={(name, teamId) =>
+                dispatch({ type: "ADD_SELLER", seller: { id: uid(), name, teamId, createdAt: Date.now() } })
+              }
               onDeleteSeller={(id) => dispatch({ type: "DELETE_SELLER", id })}
               onSetSettings={(settings) => dispatch({ type: "SET_SETTINGS", settings })}
               onResetDemo={() => {
-                dispatch({ type: "RESET_DEMO" });
+                dispatch({ type: "RESET_DEMO", teams: seedState().teams });
                 fireConfetti();
               }}
               onClearEntries={() => dispatch({ type: "CLEAR_ENTRIES" })}
@@ -136,7 +141,7 @@ function Shell() {
       <footer className="border-t border-line-soft py-6">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-faint">
           <span>Arena de Vendas · placar de equipes e vendedores</span>
-          <span>Placar sincronizado em tempo real na nuvem (Firebase)</span>
+          <span>Placar sincronizado em tempo real na nuvem (Supabase)</span>
         </div>
       </footer>
 
