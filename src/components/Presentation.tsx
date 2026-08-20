@@ -62,17 +62,20 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
       .sort((a, b) => b.st.points - a.st.points || b.st.saleValue - a.st.saleValue);
   }, [state]);
 
-  const entries = useMemo(() => sortedEntries(state), [state]);
   const sellerById = useMemo(() => new Map(state.sellers.map((s) => [s.id, s])), [state.sellers]);
+  const entries = useMemo(
+    () => sortedEntries(state).filter((e) => sellerById.has(e.sellerId)),
+    [state, sellerById]
+  );
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
   const totals = useMemo(() => {
     let value = 0, sales = 0;
-    for (const e of state.entries) {
+    for (const e of entries) {
       if (e.type === "venda") { sales += 1; value += e.value; }
     }
     return { value, sales };
-  }, [state.entries]);
+  }, [entries]);
 
   /* paginação das equipes: todas aparecem, em páginas de até 5 */
   const teamPageCount = Math.max(1, Math.ceil(teams.length / TEAMS_PER_SLIDE));

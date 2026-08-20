@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { computePoints, useStore } from "../lib/store";
-import { fmtBRL, fmtInt, fmtMoney, todayISO } from "../lib/utils";
+import { fmtBRL, fmtInt, fmtMoney, parseMoney, todayISO } from "../lib/utils";
 import { fireConfetti, Modal, useToast } from "./ui";
 import { IconBolt, IconCoins } from "./icons";
 
@@ -17,10 +17,7 @@ export default function LaunchModal({ open, onClose }: { open: boolean; onClose:
   const [date, setDate] = useState(todayISO());
   const [error, setError] = useState("");
 
-  const parsedValue = useMemo(() => {
-    const n = parseFloat(value.replace(",", "."));
-    return Number.isFinite(n) && n > 0 ? n : 0;
-  }, [value]);
+  const parsedValue = useMemo(() => parseMoney(value), [value]);
 
   const preview = computePoints("venda", parsedValue, state.settings);
 
@@ -98,8 +95,7 @@ export default function LaunchModal({ open, onClose }: { open: boolean; onClose:
             id="value"
             autoFocus
             inputMode="decimal"
-            placeholder="Ex.: 1250,00"
-            value={value}
+              placeholder="Ex.: 1.250,00 ou 1250,00"            value={value}
             onChange={(e) => setValue(e.target.value)}
             className={inputCls}
           />

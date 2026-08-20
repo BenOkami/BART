@@ -281,7 +281,7 @@ export default function TeamsView({
               {confirm.kind === "team" ? (
                 <>Remover a equipe <strong className="text-coral">{confirm.name}</strong> também remove todos os vendedores dela do ranking.</>
               ) : (
-                <>Remover <strong className="text-coral">{confirm.name}</strong> do elenco? Os lançamentos antigos deixam de contar no ranking.</>
+                <>Remover <strong className="text-coral">{confirm.name}</strong> do elenco? As vendas dele deixam de contar no placar.</>
               )}
             </p>
             <div className="flex gap-3">

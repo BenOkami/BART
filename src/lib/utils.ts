@@ -22,6 +22,29 @@ export function fmtMoney(v: number): string {
   return Number.isInteger(v) ? brl.format(v) : brlCents.format(v);
 }
 
+/**
+ * Interpreta valores digitados no padrão brasileiro ou internacional:
+ * "1.250,50" → 1250.5 · "1250,50" → 1250.5 · "1.500" → 1500 · "1250.50" → 1250.5
+ * Sempre arredonda para centavos, para o total bater com a soma das linhas.
+ */
+export function parseMoney(raw: string): number {
+  let s = raw.trim().replace(/r\$/gi, "").replace(/\s/g, "");
+  if (!s) return 0;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) {
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  } else if (hasDot) {
+    const decimals = s.split(".").pop() ?? "";
+    if (decimals.length === 3) s = s.replace(/\./g, ""); // ponto de milhar
+  }
+  const n = parseFloat(s);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.round(n * 100) / 100;
+}
+
 export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y.slice(2)}`;

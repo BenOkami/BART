@@ -388,13 +388,20 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
   const teamStats = useMemo(() => getTeamStats(state), [state]);
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
+  const sellerIds = useMemo(() => new Set(state.sellers.map((s) => s.id)), [state.sellers]);
+
+  const validEntries = useMemo(
+    () => entries.filter((e) => sellerIds.has(e.sellerId)),
+    [entries, sellerIds]
+  );
+
   const totals = useMemo(() => {
     let value = 0, sales = 0;
-    for (const e of state.entries) {
+    for (const e of validEntries) {
       if (e.type === "venda") { sales += 1; value += e.value; }
     }
     return { value, sales };
-  }, [state.entries]);
+  }, [validEntries]);
 
   const teamRows: TeamRow[] = useMemo(() => {
     return state.teams
@@ -466,12 +473,12 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
         <section ref={revFeed.ref} className={`${revFeed.className} lg:col-span-2`} style={revFeed.style}>
           <SectionHead kicker="Ritmo da arena" title="Últimos lançamentos" icon={<IconBolt size={14} />} />
           <div className="overflow-hidden rounded-lg border border-line-soft bg-ink-900/70 divide-y divide-line-soft/70">
-            {entries.length === 0 && (
+            {validEntries.length === 0 && (
               <p className="px-5 py-10 text-center text-sm text-muted">
-                Nenhum lançamento ainda. Adicione vendedores na aba <strong className="text-paper">Equipes</strong> e clique em <strong className="text-gold">Lançar resultado</strong> para abrir o placar.
+                Nenhum lançamento ainda. Adicione vendedores na aba <strong className="text-paper">Equipes</strong> e clique em <strong className="text-gold">Lançar</strong> para abrir o placar.
               </p>
             )}
-            {entries.slice(0, 7).map((e, i) => {
+            {validEntries.slice(0, 7).map((e, i) => {
               const seller = state.sellers.find((s) => s.id === e.sellerId);
               const team = seller ? teamById.get(seller.teamId) : undefined;
               return (

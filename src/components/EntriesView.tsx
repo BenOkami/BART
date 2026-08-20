@@ -13,7 +13,10 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
   const sellerById = useMemo(() => new Map(state.sellers.map((s) => [s.id, s])), [state.sellers]);
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
-  const entries = useMemo(() => sortedEntries(state), [state]);
+  const entries = useMemo(
+    () => sortedEntries(state).filter((e) => sellerById.has(e.sellerId)),
+    [state, sellerById]
+  );
 
   const filtered = useMemo(
     () =>
