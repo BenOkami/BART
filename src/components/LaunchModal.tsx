@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { computePoints, useStore } from "../lib/store";
-import { fmtBRL, fmtInt, todayISO } from "../lib/utils";
+import { fmtBRL, fmtInt, fmtMoney, todayISO } from "../lib/utils";
 import { fireConfetti, Modal, useToast } from "./ui";
 import { IconBolt, IconCoins } from "./icons";
 
@@ -48,7 +48,7 @@ export default function LaunchModal({ open, onClose }: { open: boolean; onClose:
     const entry = addEntry({ type: "venda", sellerId, value: parsedValue, note: note.trim(), date });
     fireConfetti(team ? [team.color, "#f6c453", "#f2f5fc"] : undefined);
     toast.push(
-      `Venda de ${fmtBRL(parsedValue)} para ${seller?.name} · +${fmtInt(entry.points)} pts`,
+      `Venda de ${fmtMoney(parsedValue)} para ${seller?.name} · +${fmtInt(entry.points)} pts`,
       "gold"
     );
     reset();

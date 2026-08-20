@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AppState } from "../types";
 import { getSellerStats, getTeamStats, sortedEntries } from "../lib/store";
-import { fmtBRL, fmtDate, fmtInt, hexToRgba } from "../lib/utils";
+import { fmtDate, fmtInt, fmtMoney, hexToRgba } from "../lib/utils";
 import { Avatar, TeamTag, TypeBadge } from "./ui";
 import {
   IconChevronLeft,
@@ -175,7 +175,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
             </h1>
             <div className="mt-8 flex flex-wrap gap-x-12 gap-y-6">
               <div>
-                <p className="font-display tnum text-4xl sm:text-6xl text-gold">{fmtBRL(totals.value)}</p>
+                <p className="font-display tnum text-4xl sm:text-6xl text-gold">{fmtMoney(totals.value)}</p>
                 <p className="text-[11px] font-black uppercase tracking-[0.24em] text-faint mt-2">volume vendido</p>
               </div>
               <div>
@@ -212,7 +212,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                           <p className="font-display text-2xl sm:text-4xl uppercase tracking-wide truncate" style={{ color: isLeader ? "#f6c453" : "#f2f5fc" }}>
                             {team.name} {isLeader && <IconCrown size={22} className="inline -mt-2 ml-1 text-gold" />}
                           </p>
-                          <p className="font-display tnum text-2xl sm:text-4xl shrink-0" style={{ color: isLeader ? "#f6c453" : "#f2f5fc" }}>{fmtBRL(st.saleValue)}</p>
+                          <p className="font-display tnum text-2xl sm:text-4xl shrink-0" style={{ color: isLeader ? "#f6c453" : "#f2f5fc" }}>{fmtMoney(st.saleValue)}</p>
                         </div>
                         <div className="mt-2 h-5 sm:h-6 w-full overflow-hidden rounded-sm bg-ink-900 border border-line-soft/60">
                           <div
@@ -283,7 +283,7 @@ export default function Presentation({ state, onClose }: { state: AppState; onCl
                       <div className="min-w-0 flex-1">
                         <p className="font-display text-xl uppercase tracking-wide text-paper truncate">{seller?.name ?? "Vendedor"}</p>
                         <p className="text-[13px] font-semibold text-muted truncate">
-                          {team?.name ?? "—"} · {e.type === "venda" ? fmtBRL(e.value) : "indicação registrada"} · {fmtDate(e.date)}
+                          {team?.name ?? "—"} · {fmtMoney(e.value)} · {fmtDate(e.date)}
                         </p>
                       </div>
                       <p className="font-display tnum text-3xl text-gold shrink-0">+{e.points}</p>

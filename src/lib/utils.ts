@@ -17,6 +17,11 @@ export const fmtBRL = (v: number) => brl.format(v);
 export const fmtBRLFull = (v: number) => brlCents.format(v);
 export const fmtInt = (v: number) => int.format(v);
 
+/** Valor total exato: inteiro → sem centavos; com centavos → mostra os 2 dígitos. */
+export function fmtMoney(v: number): string {
+  return Number.isInteger(v) ? brl.format(v) : brlCents.format(v);
+}
+
 export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y.slice(2)}`;
