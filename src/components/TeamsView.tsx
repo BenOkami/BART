@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { AppState, Settings, Team } from "../types";
 import { getSellerStats, getTeamStats } from "../lib/store";
-import { fmtBRL, fmtInt, useReveal } from "../lib/utils";
+import { fmtInt, fmtMoney, useReveal } from "../lib/utils";
 import { Avatar, Modal, useToast } from "./ui";
 import { IconGear, IconPlus, IconTrash, IconUsers } from "./icons";
 
@@ -156,7 +156,7 @@ export default function TeamsView({
                     {/* números */}
                     <div className="mt-4 grid grid-cols-3 gap-2 text-center">
                       <MiniStat label="Vendas" value={fmtInt(st.sales)} color="#f6c453" />
-                      <MiniStat label="Volume" value={fmtBRL(st.saleValue)} color="#4cc9f0" />
+                      <MiniStat label="Volume" value={fmtMoney(st.saleValue)} color="#4cc9f0" />
                       <MiniStat label="Vendedores" value={fmtInt(st.members)} color={team.color} />
                     </div>
 
@@ -281,7 +281,7 @@ export default function TeamsView({
               {confirm.kind === "team" ? (
                 <>Remover a equipe <strong className="text-coral">{confirm.name}</strong> também remove todos os vendedores dela do ranking.</>
               ) : (
-                <>Remover <strong className="text-coral">{confirm.name}</strong> do elenco? Os lançamentos antigos deixam de contar no ranking.</>
+                <>Remover <strong className="text-coral">{confirm.name}</strong> do elenco? As vendas dele deixam de contar no placar.</>
               )}
             </p>
             <div className="flex gap-3">

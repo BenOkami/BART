@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { AppState } from "../types";
 import { sortedEntries } from "../lib/store";
-import { fmtBRL, fmtDate, fmtInt } from "../lib/utils";
+import { fmtDate, fmtInt, fmtMoney } from "../lib/utils";
 import { TeamTag, TypeBadge, useToast } from "./ui";
 import { IconCoins, IconTrash } from "./icons";
 
@@ -13,7 +13,10 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
   const sellerById = useMemo(() => new Map(state.sellers.map((s) => [s.id, s])), [state.sellers]);
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
-  const entries = useMemo(() => sortedEntries(state), [state]);
+  const entries = useMemo(
+    () => sortedEntries(state).filter((e) => sellerById.has(e.sellerId)),
+    [state, sellerById]
+  );
 
   const filtered = useMemo(
     () =>
@@ -66,7 +69,7 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
 
       {/* resumo do filtro */}
       <div className="grid grid-cols-3 gap-3">
-        <SummaryCard label="Volume filtrado" value={fmtBRL(totals.value)} accent="#f6c453" />
+        <SummaryCard label="Volume filtrado" value={fmtMoney(totals.value)} accent="#f6c453" />
         <SummaryCard label="Vendas" value={fmtInt(totals.sales)} accent="#ff6b4a" />
         <SummaryCard label="Pontos somados" value={fmtInt(totals.pts)} accent="#a8e34d" />
       </div>
@@ -107,7 +110,7 @@ export default function EntriesView({ state, onDelete }: { state: AppState; onDe
                     {e.note && <span className="text-[11px] font-semibold text-faint truncate">· {e.note}</span>}
                   </div>
                   <span className="tnum text-sm font-bold text-right text-paper">
-                    {e.type === "venda" ? fmtBRL(e.value) : "—"}
+                    {fmtMoney(e.value)}
                   </span>
                   <span className="tnum text-sm font-extrabold text-right text-gold">+{fmtInt(e.points)}</span>
                   <span className="tnum text-[12px] font-bold text-right text-muted">{fmtDate(e.date)}</span>

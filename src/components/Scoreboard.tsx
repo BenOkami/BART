@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AppState, Seller, SellerStats, Team } from "../types";
 import { getSellerStats, getTeamStats, sortedEntries } from "../lib/store";
-import { fmtBRL, fmtDate, fmtInt, hexToRgba, useCountUp, useReveal } from "../lib/utils";
+import { fmtDate, fmtInt, fmtMoney, hexToRgba, useCountUp, useReveal } from "../lib/utils";
 import {
   Avatar,
   RankBadge,
@@ -52,7 +52,7 @@ function StatBlock({
       <p className={`font-display tnum leading-none text-paper ${hero ? "mt-3 text-5xl sm:text-6xl" : "mt-2 text-3xl sm:text-4xl"}`}>
         {format(v)}
       </p>
-      {hero && <p className="mt-2 text-[12px] font-bold text-faint">soma de todas as vendas lançadas na temporada</p>}
+      {hero && <p className="mt-2 text-[12px] font-bold text-faint">valor total de todas as vendas lançadas</p>}
     </div>
   );
 }
@@ -131,14 +131,14 @@ function TeamRanking({ rows, onLaunch }: { rows: TeamRow[]; onLaunch: () => void
                   </span>
                   {r.sales > 0 && (
                     <span className="inline-flex items-center gap-1">
-                      <IconBolt size={12} className="text-coral" /> ticket médio {fmtBRL(r.saleValue / r.sales)}
+                      <IconBolt size={12} className="text-coral" /> ticket médio {fmtMoney(r.saleValue / r.sales)}
                     </span>
                   )}
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-display tnum text-2xl sm:text-3xl leading-none" style={{ color: isLeader ? "#f6c453" : "#f2f5fc" }}>
-                  {fmtBRL(r.saleValue)}
+                  {fmtMoney(r.saleValue)}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-faint mt-1">volume vendido</p>
                 <p className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-gold/35 bg-gold/10 px-2 py-0.5 text-[11px] font-extrabold text-gold">
@@ -202,7 +202,7 @@ function PodiumCard({ row, place }: { row: SellerRow; place: 1 | 2 | 3 }) {
           </p>
           <div className="mt-3 flex items-center justify-center gap-4 text-[12px] font-semibold text-muted">
             <span className="inline-flex items-center gap-1"><IconCoins size={13} className="text-gold" />{row.sales} {row.sales === 1 ? "venda" : "vendas"}</span>
-            <span className="inline-flex items-center gap-1"><IconSpark size={13} className="text-coral" />{fmtBRL(row.saleValue)}</span>
+            <span className="inline-flex items-center gap-1"><IconSpark size={13} className="text-coral" />{fmtMoney(row.saleValue)}</span>
           </div>
         </div>
       </div>
@@ -297,7 +297,7 @@ function SellerRanking({
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-paper truncate group-hover:text-gold transition-colors">{r.seller.name}</p>
                     <p className="text-[11px] font-semibold truncate" style={{ color: r.team?.color ?? "#8fa0c6" }}>
-                      {r.team?.name ?? "sem equipe"} · {fmtBRL(r.saleValue)}
+                      {r.team?.name ?? "sem equipe"} · {fmtMoney(r.saleValue)}
                     </p>
                   </div>
                 </div>
@@ -388,13 +388,20 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
   const teamStats = useMemo(() => getTeamStats(state), [state]);
   const teamById = useMemo(() => new Map(state.teams.map((t) => [t.id, t])), [state.teams]);
 
+  const sellerIds = useMemo(() => new Set(state.sellers.map((s) => s.id)), [state.sellers]);
+
+  const validEntries = useMemo(
+    () => entries.filter((e) => sellerIds.has(e.sellerId)),
+    [entries, sellerIds]
+  );
+
   const totals = useMemo(() => {
     let value = 0, sales = 0;
-    for (const e of state.entries) {
+    for (const e of validEntries) {
       if (e.type === "venda") { sales += 1; value += e.value; }
     }
     return { value, sales };
-  }, [state.entries]);
+  }, [validEntries]);
 
   const teamRows: TeamRow[] = useMemo(() => {
     return state.teams
@@ -415,7 +422,7 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
       .map((seller) => ({
         seller,
         team: teamById.get(seller.teamId),
-        ...(sellerStats.get(seller.id) ?? { sellerId: seller.id, points: 0, sales: 0, saleValue: 0, indications: 0 }),
+        ...(sellerStats.get(seller.id) ?? { sellerId: seller.id, points: 0, sales: 0, saleValue: 0 }),
       }))
       .sort((a, b) => b.points - a.points || b.saleValue - a.saleValue);
   }, [state.sellers, sellerStats, teamById]);
@@ -450,7 +457,7 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
 
         <div ref={revStats.ref} className={`${revStats.className} mt-6 grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-line-soft rounded-lg border border-line-soft bg-ink-900/75 overflow-hidden`} style={revStats.style}>
           <div className="lg:col-span-2">
-            <StatBlock label="Volume vendido" value={totals.value} format={(v) => fmtBRL(v)} icon={<IconCoins size={17} />} accent="#f6c453" delay={0} hero />
+            <StatBlock label="Volume vendido" value={totals.value} format={(v) => fmtMoney(v)} icon={<IconCoins size={17} />} accent="#f6c453" delay={0} hero />
           </div>
           <StatBlock label="Vendas fechadas" value={totals.sales} format={(v) => fmtInt(Math.round(v))} icon={<IconBolt size={17} />} accent="#ff6b4a" delay={120} />
         </div>
@@ -466,12 +473,12 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
         <section ref={revFeed.ref} className={`${revFeed.className} lg:col-span-2`} style={revFeed.style}>
           <SectionHead kicker="Ritmo da arena" title="Últimos lançamentos" icon={<IconBolt size={14} />} />
           <div className="overflow-hidden rounded-lg border border-line-soft bg-ink-900/70 divide-y divide-line-soft/70">
-            {entries.length === 0 && (
+            {validEntries.length === 0 && (
               <p className="px-5 py-10 text-center text-sm text-muted">
-                Nenhum lançamento ainda. Adicione vendedores na aba <strong className="text-paper">Equipes</strong> e clique em <strong className="text-gold">Lançar resultado</strong> para abrir o placar.
+                Nenhum lançamento ainda. Adicione vendedores na aba <strong className="text-paper">Equipes</strong> e clique em <strong className="text-gold">Lançar</strong> para abrir o placar.
               </p>
             )}
-            {entries.slice(0, 7).map((e, i) => {
+            {validEntries.slice(0, 7).map((e, i) => {
               const seller = state.sellers.find((s) => s.id === e.sellerId);
               const team = seller ? teamById.get(seller.teamId) : undefined;
               return (
@@ -480,7 +487,7 @@ export default function Scoreboard({ state, onLaunch }: { state: AppState; onLau
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-paper truncate">{seller?.name ?? "Vendedor removido"}</p>
                     <p className="text-[11px] font-semibold text-faint truncate">
-                      {team?.name ?? "—"} · {e.type === "venda" ? fmtBRL(e.value) : "nova indicação"}
+                      {team?.name ?? "—"} · {fmtMoney(e.value)}
                       {e.note ? ` · ${e.note}` : ""}
                     </p>
                   </div>
